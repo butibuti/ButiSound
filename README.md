@@ -1,0 +1,2 @@
+# ButiSound
+XAudio2のラッパーライブラリ
