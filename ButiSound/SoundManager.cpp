@@ -1,7 +1,7 @@
 #include"stdafx.h"
 #include<wrl.h>
 #include<xaudio2.h>
-#include<vector>
+#include"ButiMemorySystem/ButiMemorySystem/ButiList.h"
 #include"ButiUtil/ButiUtil/Util.h"
 #include"ButiUtil/ButiUtil/Timer.h"
 #include"WaveDatas.h"
@@ -105,7 +105,7 @@ private:
 	SoundObject_t m_bgm= nullptr;
 	IXAudio2MasteringVoice* p_masterVoice = nullptr;
 	Microsoft::WRL::ComPtr< IXAudio2> cmp_pXAudio2 = nullptr;
-	std::vector<SoundObject_t> vec_seVoices;
+	ButiEngine:: List<SoundObject_t> list_seVoices;
 	float m_masterVolume = 1.0f;
 	ButiEngine::Value_ptr<ButiEngine::RelativeTimer> m_vlp_clearTimer;
 };
@@ -138,11 +138,11 @@ void SoundManager::Update()
 void SoundManager::ClearCheck()
 {
 
-	auto itr = vec_seVoices.begin();
-	while (itr != vec_seVoices.end()) {
+	auto itr = list_seVoices.begin();
+	while (itr != list_seVoices.end()) {
 		if ((*itr)->IsEnd()) {
 			(*itr)->Destroy();
-			itr = vec_seVoices.erase(itr);
+			itr = list_seVoices.erase(itr);
 		}
 		else {
 			itr++;
@@ -159,7 +159,7 @@ SoundObject_t SoundManager::PlaySE(Resource_Sound_t arg_sound, const float arg_v
 	if (!sound->Initialize(cmp_pXAudio2)) {
 		return nullptr;
 	}
-	vec_seVoices.push_back(sound);
+	list_seVoices.push_back(sound);
 	sound->Start();
 	return sound;
 }
@@ -191,7 +191,7 @@ void SoundManager::SetMasterVolume(const float arg_masterVolume)
 
 void SoundManager::Release()
 {
-	for (auto itr :vec_seVoices) {
+	for (auto itr :list_seVoices) {
 		(itr)->Destroy();
 	}
 	DestroyBGM();
@@ -200,7 +200,7 @@ void SoundManager::Release()
 
 void SoundManager::StopSE()
 {
-	for (auto itr : vec_seVoices) {
+	for (auto itr : list_seVoices) {
 		(itr)->Stop();
 	}
 }
@@ -215,7 +215,7 @@ void SoundManager::StopBGM()
 void SoundManager::RestartSE()
 {
 
-	for (auto itr : vec_seVoices) {
+	for (auto itr : list_seVoices) {
 		(itr)->Start();
 	}
 }
@@ -230,11 +230,11 @@ void SoundManager::RestartBGM()
 void SoundManager::DestroySE()
 {
 
-	for (auto itr : vec_seVoices) {
+	for (auto itr : list_seVoices) {
 		(itr)->Stop();
 		(itr)->Destroy();
 	}
-	vec_seVoices.clear();
+	list_seVoices.Clear();
 }
 
 void SoundManager::DestroyBGM()
