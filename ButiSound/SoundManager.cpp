@@ -108,30 +108,46 @@ private:
 	ButiEngine:: List<SoundObject_t> list_seVoices;
 	float m_masterVolume = 1.0f;
 	ButiEngine::Value_ptr<ButiEngine::RelativeTimer> m_vlp_clearTimer;
+	bool m_existSoundDevice = true;
 };
 
 
 void SoundManager::Initialize()
 {
-	CoInitialize(NULL);
-	HRESULT hr;
-	if (FAILED(hr = XAudio2Create(cmp_pXAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR))) {
-		throw ButiEngine::ButiException(L"Failed", L"Create", L"XAudio2");
-	}
+	CoInitialize(nullptr);
 
-
-	if (FAILED(hr = cmp_pXAudio2->CreateMasteringVoice(&p_masterVoice, XAUDIO2_DEFAULT_CHANNELS, XAUDIO2_DEFAULT_SAMPLERATE, 0, 0, NULL)))
-	{
-		throw ButiEngine::ButiException(L"Failed", L"Create", L"MasteringVoice");
-	}
 	m_vlp_clearTimer = ButiEngine::ObjectFactory::Create<ButiEngine::RelativeTimer>(600);
 	m_vlp_clearTimer->Start();
+	HRESULT hr;
+	if (FAILED(XAudio2Create(cmp_pXAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR))) {
+		m_existSoundDevice = false;
+		return;
+	}
+	else {
+		m_existSoundDevice = true;
+	}
+
+
+	if (FAILED(cmp_pXAudio2->CreateMasteringVoice(&p_masterVoice, XAUDIO2_DEFAULT_CHANNELS, XAUDIO2_DEFAULT_SAMPLERATE, 0, 0, nullptr)))
+	{
+		m_existSoundDevice = false;
+		return;
+	}
+	else {
+		m_existSoundDevice = true;
+	}
+
 }
 
 void SoundManager::Update()
 {
 	if (m_vlp_clearTimer->Update()) {
-		ClearCheck();
+		if (m_existSoundDevice) {
+			ClearCheck();
+		}
+		else {
+			Initialize();
+		}
 	}
 }
 
@@ -153,6 +169,9 @@ void SoundManager::ClearCheck()
 
 SoundObject_t SoundManager::PlaySE(Resource_Sound_t arg_sound, const float arg_volume, const bool arg_isLoop)
 {
+	if (!m_existSoundDevice) {
+		return nullptr;
+	}
 	auto waveData = arg_sound->GetData();
 	waveData->m_buffer.Flags = XAUDIO2_END_OF_STREAM;
 	auto sound = ButiEngine::make_value<SoundObject>(arg_sound,arg_volume,false, arg_isLoop);
@@ -166,6 +185,9 @@ SoundObject_t SoundManager::PlaySE(Resource_Sound_t arg_sound, const float arg_v
 
 SoundObject_t SoundManager::PlayBGM(Resource_Sound_t arg_sound, const float arg_volume)
 {
+	if (!m_existSoundDevice) {
+		return nullptr;
+	}
 	auto waveData = arg_sound->GetData();
 	waveData->m_buffer.Flags = XAUDIO2_END_OF_STREAM;
 	auto sound = ButiEngine::make_value<SoundObject>(arg_sound, arg_volume,  false,true);
@@ -185,12 +207,18 @@ SoundObject_t SoundManager::PlayBGM(Resource_Sound_t arg_sound, const float arg_
 
 void SoundManager::SetMasterVolume(const float arg_masterVolume)
 {
+	if (!m_existSoundDevice) {
+		return;
+	}
 	m_masterVolume = arg_masterVolume;
 	p_masterVoice->SetVolume(arg_masterVolume);
 }
 
 void SoundManager::Release()
 {
+	if (!m_existSoundDevice) {
+		return;
+	}
 	for (auto itr :list_seVoices) {
 		(itr)->Destroy();
 	}
@@ -222,6 +250,9 @@ void SoundManager::RestartSE()
 
 void SoundManager::RestartBGM()
 {
+	if (!m_existSoundDevice) {
+		return;
+	}
 	if (m_bgm) {
 		m_bgm->Start();
 	}
@@ -229,7 +260,9 @@ void SoundManager::RestartBGM()
 
 void SoundManager::DestroySE()
 {
-
+	if (!m_existSoundDevice) {
+		return;
+	}
 	for (auto itr : list_seVoices) {
 		(itr)->Stop();
 		(itr)->Destroy();
@@ -239,6 +272,9 @@ void SoundManager::DestroySE()
 
 void SoundManager::DestroyBGM()
 {
+	if (!m_existSoundDevice) {
+		return;
+	}
 	if (m_bgm) {
 		m_bgm->Start();
 		m_bgm->Destroy();
